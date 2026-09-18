@@ -8,6 +8,7 @@ A growing collection of personal zsh scripts for system administration and daily
 
 - [`weather.zsh`](#weatherzsh) — NOAA weather CLI with desktop notification and caching support
 - [`create_user.zsh`](#create_userzsh) — Interactive Linux user account creation with password policy enforcement
+- [`bt_speaker.py`](#bt_speakerpy) — Bluetooth speaker connect, PipeWire routing fixup, and rmpc launcher
 
 ---
 
@@ -196,11 +197,80 @@ User 'alice' has been created with:
 
 ---
 
+## `bt_speaker.py`
+
+Connects to a specific Bluetooth speaker over D-Bus (via BlueZ), fixes up PipeWire routing so audio doesn't get stranded on the wrong sink or come back muted, sets volume, and (re)starts [rmpc](https://github.com/mierak/rmpc) playback.
+
+### Why it exists
+
+Connecting a Bluetooth A2DP speaker manually with `bluetoothctl connect` reports `Connected: yes` before PipeWire has actually created a sink for it. Anything already playing doesn't migrate to the new default sink on its own, and WirePlumber can restore a stale mute state on the session change — the net effect being lost/muted audio on both the new speaker and the built-in output. This script waits for the real events/state instead of guessing with `sleep`.
+
+### Dependencies
+
+| Tool | Purpose | Install |
+|------|---------|---------|
+| `dbus-next` | Async D-Bus client for watching BlueZ connection state | `pip install dbus-next` |
+| `wpctl` / `pw-dump` | PipeWire sink discovery, default-sink routing, volume/mute | part of `pipewire` |
+| `pactl` | Migrating already-playing streams, bulk unmute | part of `pipewire-pulse` |
+| `rmpc` | Music playback | [rmpc](https://github.com/mierak/rmpc) |
+
+### Configuration
+
+A Bluetooth MAC address ties a physical device to wherever this repo is pushed, so it isn't hardcoded in the script or committed to git. Set it (and optionally a default volume) in a config file, same pattern as [`weather.zsh`](#weatherzsh):
+
+```
+~/.config/bt_speaker/config
+```
+
+The file must be `chmod 600`. Only these keys are accepted — anything else is ignored with a warning, and the file is skipped entirely (with a warning) if it's group- or world-accessible:
+
+```
+MAC=AA:BB:CC:DD:EE:FF
+VOLUME=45%
+```
+
+A MAC passed on the command line always overrides the config file.
+
+### Usage
+
+```
+./bt_speaker.py [MAC] [--volume 45%] [--play]
+```
+
+| Argument | Description |
+|----------|-------------|
+| `MAC` | Bluetooth MAC address to connect to (default: `MAC` from the config file, if set). Must be a valid `AA:BB:CC:DD:EE:FF` address. Required (from either the CLI or config file) — the script exits with an error if neither is set. |
+| `--volume, -vol VOLUME` | Volume to set on the speaker sink, 0-150% (default: `VOLUME` from the config file, or `45%`). A bare number like `55` is treated as `55%` — never passed straight to `wpctl`, which would otherwise read it as *linear* volume (`55` == 5500%). |
+| `--play` | Also (re)start `rmpc` playback (`rmpc stop; rmpc play`) after connecting/routing. Off by default — routing already migrates any currently playing stream onto the new sink, so a plain volume/connect run doesn't need to interrupt playback. |
+
+### What it does
+
+1. Connects to the device via `org.bluez.Device1.Connect()` and waits on a `PropertiesChanged` D-Bus signal for `Connected: true` (no polling/sleeping)
+2. Polls `pw-dump` for the PipeWire `Audio/Sink` node matching the device's Bluetooth address, since the node can take a few seconds to appear after BlueZ reports connected
+3. Sets that sink as the PipeWire default, unmutes it, and sets its volume
+4. Moves any currently playing streams onto the new default sink via `pactl move-sink-input`, and unmutes every sink as a safety net
+5. Runs `rmpc stop; rmpc play` to (re)start playback, only if `--play` is passed
+
+### Example
+
+```
+# Connect and route audio using MAC/VOLUME from ~/.config/bt_speaker/config
+./bt_speaker.py
+
+# Different speaker/volume, overriding the config file
+./bt_speaker.py AA:BB:CC:DD:EE:FF -vol 60
+
+# Connect, route, and also kick rmpc into playing
+./bt_speaker.py --play
+```
+
+---
+
 ## General Notes
 
 - All scripts support `-h` / `--help` for full usage documentation
 - Scripts are written for **zsh** but aim to be compatible with standard Linux tooling
-- Tested on Arch Linux; should work on any systemd-based Linux distribution and macOS (where applicable)
+- Tested on Arch Linux; should work on any systemd-based Linux distribution and macOS (with the necessary dependencies and permissions).
 
 ## License
 

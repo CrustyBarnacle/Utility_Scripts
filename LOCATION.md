@@ -1,6 +1,6 @@
-# Setting Your Location — `weather.zsh`
+# Setting Your Location — `weather`
 
-`weather.zsh` needs to know where you are to fetch the right forecast. This is done with two required values and one optional label.
+`weather` needs to know where you are to fetch the right forecast. This is done with two required values and one optional label.
 
 ---
 
@@ -38,7 +38,7 @@ On Android: Google Maps → tap and hold to drop a pin → coordinates shown at 
 **Command line (if you have `curl` and `jq` already)**
 ```zsh
 curl -s "https://nominatim.openstreetmap.org/search?q=Pasadena,CA&format=json&limit=1" \
-  -H "User-Agent: weather.zsh-setup" \
+  -H "User-Agent: weather-setup" \
   | jq -r '.[0] | "LAT=\(.lat | tonumber | . * 10000 | round / 10000)\nLON=\(.lon | tonumber | . * 10000 | round / 10000)"'
 ```
 Replace `Pasadena,CA` with your city and state or a full address.
@@ -61,15 +61,15 @@ There are three ways, in order of permanence:
 Create the config file if it doesn't exist:
 
 ```zsh
-mkdir -p ~/.config/weather_zsh
-touch ~/.config/weather_zsh/config
-chmod 600 ~/.config/weather_zsh/config   # required — script refuses to load looser permissions
+mkdir -p ~/.config/weather
+touch ~/.config/weather/config
+chmod 600 ~/.config/weather/config   # required — script refuses to load looser permissions
 ```
 
 Add your location (and optionally a display name):
 
 ```zsh
-# ~/.config/weather_zsh/config
+# ~/.config/weather/config
 # Note: LAT and LON must be truncated to 4 decimal places (NWS API requirement)
 LAT=34.0803
 LON=-118.3617
@@ -81,14 +81,14 @@ The config file is loaded on every run, so you never need to pass coordinates on
 ### 2. Command-line flags (one-off or scripted use)
 
 ```zsh
-./weather.zsh --lat 40.7128 --lon -74.0060 --name "New York, NY"
+./weather --lat 40.7128 --lon -74.0060 --name "New York, NY"
 ```
 
 Flags override the config file for that run only. Useful for checking another city without changing your defaults.
 
 ### 3. Edit the script defaults (simple but less flexible)
 
-At the top of `weather.zsh`, change these three lines:
+At the top of `weather`, change these three lines:
 
 ```zsh
 DEFAULT_LAT="34.1478"
@@ -96,7 +96,7 @@ DEFAULT_LON="-118.1445"
 DEFAULT_LOCATION_NAME="Los Angeles, CA"
 ```
 
-This permanently changes the fallback used when no config file or flags are present. Fine for personal use, but means your changes will conflict on future script updates — the config file approach is cleaner.
+This permanently changes the fallback used when no config file or flags are present. Fine for personal use, but your changes will conflict on future script updates, or may simply be lost — the config file approach is cleaner and will survive script updates.
 
 ---
 
@@ -111,6 +111,6 @@ Script defaults  →  Config file  →  CLI flags
 
 ---
 
-## Future: Location Helper Utility
+## Planned Feature: Location Helper Utility (TDB - Maybe, Maybe Not)
 
-A future `get_location.zsh` utility is planned to automate coordinate lookup from a place name or the system's current location. For now, the options above cover the most common workflows without introducing dependencies on any particular location service.
+A future `get_location` utility/function will automate coordinate lookup from a place name or the system's current location. The current implementation covers common workflows without depending on any specific location service.

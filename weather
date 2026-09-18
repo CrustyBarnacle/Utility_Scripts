@@ -1,10 +1,10 @@
 #!/bin/zsh
 
 # =============================================================================
-# weather.zsh — NOAA Weather CLI
+# weather — NOAA Weather CLI
 # =============================================================================
 # Fetches current conditions and forecast from the NWS API for a given location.
-# Output is suitable for desktop notifications, applets, status bars, or caching.
+# Output available for desktop notifications, applets, status bars; data is cached locally.
 #
 # NOAA API:  https://api.weather.gov
 # Format:    JSON-LD (https://json-ld.org/)
@@ -12,7 +12,7 @@
 # Dependencies: curl, jq, bc 
 #
 # Usage:
-#   ./weather.zsh [OPTIONS]
+#   ./weather [OPTIONS]
 #
 # See --help for full usage.
 # =============================================================================
@@ -25,10 +25,10 @@ DEFAULT_LON="-118.3617"
 DEFAULT_LOCATION_NAME="Los Angeles, CA"
 
 # User-Agent is required by the NWS API (no key needed, but UA must be set)
-USER_AGENT="weather.zsh/1.0 (zsh-scripts-collection; github-user)"
+USER_AGENT="weather/1.0 (zsh-scripts-collection; github-user)"
 
 # Cache settings
-CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/weather_zsh"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/weather"
 CACHE_FILE="$CACHE_DIR/weather_cache.json"
 CACHE_TTL=600   # seconds (10 minutes)
 
@@ -37,14 +37,14 @@ FORMAT="summary"    # summary | full | json | notification | oneline
 
 # ----------------------------------------------------------------------------
 # Clothing recommendation thresholds (degrees F)
-# Override in config file: ~/.config/weather_zsh/config
+# Override in config file: ~/.config/weather/config
 # ----------------------------------------------------------------------------
-LONG_SLEEVE_THRESHOLD=70   # suggest long sleeves at or below this temp
-JACKET_THRESHOLD=65        # suggest a jacket at or below this temp
+LONG_SLEEVE_THRESHOLD=75   # suggest long sleeves at or below this temp
+JACKET_THRESHOLD=64        # suggest a jacket at or below this temp
 CLOTHING_ADVICE=true       # enabled by default for summary and notification
 
 # Config file — loaded after defaults so it can override any of the above
-CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/weather_zsh/config"
+CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/weather/config"
 
 # load_config: safely parse the config file.
 # Only the keys in ALLOWED_CONFIG_KEYS are accepted; all others are ignored.
@@ -98,7 +98,7 @@ load_config
 # ----------------------------------------------------------------------------
 show_help() {
     cat << EOF
-Usage: ./weather.zsh [OPTIONS]
+Usage: ./weather [OPTIONS]
 
 Fetches current weather and forecast from the NOAA/NWS public API.
 Default location: $DEFAULT_LOCATION_NAME ($DEFAULT_LAT, $DEFAULT_LON)
@@ -124,19 +124,19 @@ OPTIONS:
 
 EXAMPLES:
   # Default location (Los Angeles, CA), summary output
-  ./weather.zsh
+  ./weather
 
   # Custom location, notification format
-  ./weather.zsh --lat 40.7128 --lon -74.0060 --name "New York, NY" --format notification
+  ./weather --lat 40.7128 --lon -74.0060 --name "New York, NY" --format notification
 
   # One-liner for a status bar / conky / waybar
-  ./weather.zsh --format oneline --cache
+  ./weather --format oneline --cache
 
   # Cache result to file for use by other scripts
-  ./weather.zsh --format json --cache > /tmp/weather_latest.json
+  ./weather --format json --cache > /tmp/weather_latest.json
 
   # Force fresh fetch, full forecast
-  ./weather.zsh --no-cache --format full
+  ./weather --no-cache --format full
 
 OUTPUT FORMATS:
   summary       Human-readable block with current temp, conditions, wind,
@@ -252,7 +252,7 @@ check_deps() {
         echo "Error: Missing required dependencies: ${missing[*]}" >&2
         echo "Install them with your package manager, e.g.:" >&2
         echo "  sudo apt install curl jq bc    # Debian/Ubuntu" >&2
-        echo "  sudo pacman -S curl jq bc      # Arch Linux" >&2
+        echo "  sudo pacman -S --needed curl jq bc      # Arch Linux" >&2
         echo "  brew install curl jq bc        # macOS" >&2
         exit 1
     fi
@@ -384,22 +384,24 @@ fetch_weather() {
 }
 
 # ----------------------------------------------------------------------------
-# Unit helpers
+# Unit conversion helpers ($1: float or null)
 # ----------------------------------------------------------------------------
 c_to_f() {
-    # $1: celsius (float or null)
-    local c="$1"
+    # convert Celsius(c) to Fahrenheit(f) 
     [[ "$c" == "null" || -z "$c" ]] && echo "N/A" && return
     printf "%.0f" "$(echo "$c * 9/5 + 32" | bc -l)"
 }
 
+
 ms_to_mph() {
+    # convert meters per second (m/s) to miles per hour (mph)
     local ms="$1"
     [[ "$ms" == "null" || -z "$ms" ]] && echo "N/A" && return
     printf "%.0f" "$(echo "$ms * 2.23694" | bc -l)"
 }
 
 pa_to_inhg() {
+    # convert pascals (Pa) to inches of mercury (inHg)
     local pa="$1"
     [[ "$pa" == "null" || -z "$pa" ]] && echo "N/A" && return
     printf "%.2f" "$(echo "$pa / 3386.39" | bc -l)"

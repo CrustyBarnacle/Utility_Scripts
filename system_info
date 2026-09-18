@@ -1,0 +1,13 @@
+#!/bin/zsh
+
+echo "System Information:"
+echo "=================="
+
+echo "CPU:"
+printf "\tModel: $(lscpu | grep "Model name:" | sed 's/Model name:\s*//')\n"
+printf "\tCores: $(nproc)\n"
+printf "\tThreads: $(grep -c "^processor" /proc/cpuinfo)\n"
+
+echo "Memory:"
+printf "\tTotal: $(free -h | awk '/^Mem:/ {print $2}')\n"
+printf "\tAvailable: $(free -h | awk '/^Mem:/ {print $7}')\n"

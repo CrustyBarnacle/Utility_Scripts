@@ -3,7 +3,7 @@
 # Function to display help
 show_help() {
     cat << EOF
-Usage: sudo ./create_user.zsh
+Usage: sudo ./create_user
 
 This script creates a new user with the following features:
   - Creates a new user account
@@ -22,7 +22,7 @@ Requirements:
   - Username must not already exist
 
 Example:
-  sudo ./create_user.zsh
+  sudo ./create_user
 
 EOF
     exit 0
