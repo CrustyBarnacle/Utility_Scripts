@@ -38,6 +38,7 @@ from pathlib import Path
 
 from dbus_next import BusType, Variant
 from dbus_next.aio import MessageBus
+from dbus_next.errors import DBusError
 
 CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", "~/.config")).expanduser() / "bt_speaker" / "config"
 ALLOWED_CONFIG_KEYS = {"MAC", "VOLUME"}
@@ -127,7 +128,17 @@ async def connect_device(bus: MessageBus, mac: str) -> None:
     props.on_properties_changed(on_properties_changed)
 
     print(f"Connecting to {mac}...")
-    await device.call_connect()
+    try:
+        await device.call_connect()
+    except DBusError as exc:
+        if exc.type != "br-connection-unknown":
+            raise
+        # BlueZ's connection-state tracking has drifted out of sync with the
+        # kernel's actual ACL link (stale leftover from a prior session) —
+        # an explicit Disconnect resets that state before retrying Connect.
+        print(f"BlueZ reported {exc.type}; resetting connection state and retrying...")
+        await device.call_disconnect()
+        await device.call_connect()
 
     try:
         await asyncio.wait_for(connected_evt.wait(), timeout=CONNECT_TIMEOUT)
