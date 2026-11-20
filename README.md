@@ -1,4 +1,4 @@
-# zsh-scripts
+# Utility_Scripts
 
 A growing collection of personal zsh scripts for system administration and daily automation tasks. Each script is self-contained, independently runnable, and includes built-in `--help` documentation.
 
@@ -6,13 +6,13 @@ A growing collection of personal zsh scripts for system administration and daily
 
 ## Scripts
 
-- [`weather.zsh`](#weatherzsh) — NOAA weather CLI with desktop notification and caching support
+- [`weather`](#weather) — NOAA weather CLI with desktop notification and caching support
 - [`create_user.zsh`](#create_userzsh) — Interactive Linux user account creation with password policy enforcement
 - [`bt_speaker.py`](#bt_speakerpy) — Bluetooth speaker connect, PipeWire routing fixup, and rmpc launcher
 
 ---
 
-## `weather.zsh`
+## `weather`
 
 Fetches current conditions and forecasts from the [NOAA/NWS public API](https://api.weather.gov). No API key required. Output formats are designed for terminal use, desktop notifications, status bars, and piping to other tools.
 
